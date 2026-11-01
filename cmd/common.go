@@ -60,7 +60,12 @@ func newCookieJar(stateDirectory string) http.CookieJar {
 
 // newKeychain returns a new keychain instance.
 func newKeychain(stateDirectory string, interactive bool) keychain.Keychain {
-	ring := util.Must(openKeyring(keyring.Config{
+	return util.Must(openKeychain(stateDirectory, interactive))
+}
+
+// openKeychain allows public catalog commands to continue without a keyring.
+func openKeychain(stateDirectory string, interactive bool) (keychain.Keychain, error) {
+	ring, err := openKeyring(keyring.Config{
 		AllowedBackends: []keyring.BackendType{
 			keyring.KeychainBackend,
 			keyring.SecretServiceBackend,
@@ -86,12 +91,15 @@ func newKeychain(stateDirectory string, interactive bool) keychain.Keychain {
 
 			return password, nil
 		},
-	}))
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to open keyring: %w", err)
+	}
 
 	return keychain.New(keychain.Args{
 		Keyring: ring,
 		Label:   KeychainServiceName,
-	})
+	}), nil
 }
 
 // initWithCommand initializes the dependencies of the command.
@@ -109,7 +117,15 @@ func initWithCommand(cmd *cobra.Command) {
 	dependencies.Machine = machine.New(machine.Args{OS: dependencies.OS})
 	stateDirectory := util.Must(prepareStateDirectory(dependencies.OS, dependencies.Machine.HomeDirectory()))
 	dependencies.CookieJar = newCookieJar(stateDirectory)
-	dependencies.Keychain = newKeychain(stateDirectory, interactive)
+	if cmd.Name() == "search" {
+		// Never ask to unlock a keyring just to search the public catalog.
+		dependencies.Keychain = nil
+		if !cmd.Flags().Changed("country") {
+			dependencies.Keychain, _ = openKeychain(stateDirectory, false)
+		}
+	} else {
+		dependencies.Keychain = newKeychain(stateDirectory, interactive)
+	}
 	dependencies.AppStore = appstore.NewAppStore(appstore.Args{
 		CookieJar:       dependencies.CookieJar,
 		OperatingSystem: dependencies.OS,

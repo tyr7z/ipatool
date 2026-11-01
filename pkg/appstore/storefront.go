@@ -2,6 +2,7 @@ package appstore
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 )
 
@@ -195,4 +196,16 @@ var storeFronts = map[string]string{
 	"ZA": "143472",
 	"ZM": "143622",
 	"ZW": "143605",
+}
+
+// Countries returns the supported App Store country codes in alphabetical order.
+func Countries() []string {
+	countries := make([]string, 0, len(storeFronts))
+	for country := range storeFronts {
+		countries = append(countries, country)
+	}
+
+	sort.Strings(countries)
+
+	return countries
 }

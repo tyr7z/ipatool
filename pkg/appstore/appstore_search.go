@@ -18,6 +18,7 @@ type SearchInput struct {
 	Term     string
 	Limit    int64
 	Platform Platform
+	Country string
 }
 
 type SearchOutput struct {
@@ -26,9 +27,17 @@ type SearchOutput struct {
 }
 
 func (t *appstore) Search(input SearchInput) (SearchOutput, error) {
-	countryCode, err := countryCodeFromStoreFront(input.Account.StoreFront)
-	if err != nil {
-		return SearchOutput{}, fmt.Errorf("country code is invalid: %w", err)
+	countryCode := strings.ToUpper(strings.TrimSpace(input.Country))
+
+	if countryCode == "" {
+		var err error
+
+		countryCode, err = countryCodeFromStoreFront(input.Account.StoreFront)
+		if err != nil {
+			return SearchOutput{}, fmt.Errorf("country code is invalid: %w", err)
+		}
+	} else if _, ok := storeFronts[countryCode]; !ok {
+		return SearchOutput{}, fmt.Errorf("unsupported country code %q", input.Country)
 	}
 
 	if input.Platform == PlatformVisionOS {

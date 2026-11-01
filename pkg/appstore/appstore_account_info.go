@@ -2,6 +2,7 @@ package appstore
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 )
 
@@ -10,6 +11,10 @@ type AccountInfoOutput struct {
 }
 
 func (t *appstore) AccountInfo() (AccountInfoOutput, error) {
+	if t.keychain == nil {
+		return AccountInfoOutput{}, errors.New("no keychain available")
+	}
+
 	data, err := t.keychain.Get("account")
 	if err != nil {
 		return AccountInfoOutput{}, fmt.Errorf("failed to get account: %w", err)

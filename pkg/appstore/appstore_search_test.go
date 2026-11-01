@@ -33,6 +33,35 @@ var _ = Describe("AppStore (Search)", func() {
 		ctrl.Finish()
 	})
 
+	DescribeTable("uses an explicit normalized country", func(account Account, country string) {
+		mockClient.EXPECT().Send(gomock.Any()).Do(func(req http.Request) {
+			parsed, err := url.Parse(req.URL)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(parsed.Query().Get("country")).To(Equal("JP"))
+		}).Return(http.Result[searchResult]{StatusCode: 200}, nil)
+		_, err := as.Search(SearchInput{Account: account, Country: country, Term: "minecraft", Limit: 5})
+		Expect(err).NotTo(HaveOccurred())
+	},
+		Entry("without an account", Account{}, "JP"),
+		Entry("overrides account country", Account{StoreFront: "143441"}, " jp "),
+	)
+
+	It("rejects unsupported country overrides before requesting metadata", func() {
+		_, err := as.Search(SearchInput{Country: "ZZ", Term: "minecraft"})
+		Expect(err).To(MatchError(ContainSubstring("unsupported country code")))
+	})
+
+	It("uses the override for visionOS search", func() {
+		failure := errors.New("stop after inspecting request")
+		mockStorefrontClient.EXPECT().Send(gomock.Any()).Do(func(req http.Request) {
+			parsed, err := url.Parse(req.URL)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(parsed.Path).To(Equal("/jp/vision/search"))
+		}).Return(http.Result[[]byte]{}, failure)
+		_, err := as.Search(SearchInput{Country: "JP", Platform: PlatformVisionOS, Term: "notes"})
+		Expect(errors.Is(err, failure)).To(BeTrue())
+	})
+
 	DescribeTable("decodes catalog platforms",
 		func(metadata string, expected []Platform) {
 			var result searchResult

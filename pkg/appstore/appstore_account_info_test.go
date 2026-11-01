@@ -29,6 +29,12 @@ var _ = Describe("AppStore (AccountInfo)", func() {
 		ctrl.Finish()
 	})
 
+	It("returns an error when no keychain is configured", func() {
+		store := NewAppStore(Args{})
+		_, err := store.AccountInfo()
+		Expect(err).To(MatchError("no keychain available"))
+	})
+
 	When("keychain returns valid data", func() {
 		const (
 			testEmail = "test-email"

@@ -50,6 +50,7 @@ func rootCmd() *cobra.Command {
 	cmd.AddCommand(listPurchasesCmd())
 	cmd.AddCommand(purchaseCmd())
 	cmd.AddCommand(searchCmd())
+	cmd.AddCommand(lookupCmd())
 	cmd.AddCommand(ListVersionsCmd())
 	cmd.AddCommand(getVersionMetadataCmd())
 	cmd.AddCommand(mcpCmd())

@@ -50,6 +50,7 @@ Available Commands:
   help                 Help about any command
   list-purchases       List apps owned by the authenticated App Store account
   list-versions        List the available versions of an App Store app
+  lookup               Look up an App Store app without signing in
   mcp                  Serve App Store tools over MCP using stdio
   purchase             Obtain a license for the app from the App Store
   search               Search for iOS, iPadOS, tvOS, watchOS, visionOS, and macOS apps available on the App Store
