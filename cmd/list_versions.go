@@ -15,6 +15,7 @@ func ListVersionsCmd() *cobra.Command {
 		appID         int64
 		bundleID      string
 		platformValue string
+		country       string
 	)
 
 	cmd := &cobra.Command{
@@ -55,7 +56,7 @@ func ListVersionsCmd() *cobra.Command {
 
 				app := appstore.App{ID: appID}
 				if bundleID != "" {
-					lookupResult, err := dependencies.AppStore.Lookup(appstore.LookupInput{Account: acc, BundleID: bundleID, Platform: platform})
+					lookupResult, err := dependencies.AppStore.Lookup(appstore.LookupInput{Account: acc, BundleID: bundleID, Platform: platform, Country: country})
 					if err != nil {
 						return err
 					}
@@ -63,7 +64,7 @@ func ListVersionsCmd() *cobra.Command {
 					app = lookupResult.App
 				}
 
-				out, err := dependencies.AppStore.ListVersions(appstore.ListVersionsInput{Context: cmd.Context(), Account: acc, App: app, Platform: platform})
+				out, err := dependencies.AppStore.ListVersions(appstore.ListVersionsInput{Context: cmd.Context(), Account: acc, App: app, Platform: platform, Country: country})
 				if err != nil {
 					return err
 				}
@@ -93,6 +94,8 @@ func ListVersionsCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&bundleID, "bundle-identifier", "b", "", "The bundle identifier of the target app (overrides the app ID)")
 
 	cmd.Flags().StringVar(&platformValue, "platform", "", "Platform to list versions for: iphone (iOS), ipad (iPadOS), appletv (tvOS), watchos, visionos, or macos")
+
+	cmd.Flags().StringVarP(&country, "country", "c", "", "App Store country code (defaults to the account storefront)")
 
 	return cmd
 }

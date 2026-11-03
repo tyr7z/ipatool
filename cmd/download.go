@@ -25,6 +25,7 @@ func downloadCmdWithAppStore(appStore func() appstore.AppStore) *cobra.Command {
 		bundleID          string
 		externalVersionID string
 		platformValue     string
+		country           string
 	)
 
 	cmd := &cobra.Command{
@@ -37,6 +38,11 @@ func downloadCmdWithAppStore(appStore func() appstore.AppStore) *cobra.Command {
 
 			platform, err := appstore.ParsePlatform(platformValue)
 			if err != nil {
+				return err
+			}
+
+			// Validate the override before accessing the account.
+			if _, err := (appstore.Account{}).WithCountry(country); err != nil {
 				return err
 			}
 
@@ -62,6 +68,11 @@ func downloadCmdWithAppStore(appStore func() appstore.AppStore) *cobra.Command {
 					}
 
 					acc = loginResult.Account
+				}
+
+				acc, err = acc.WithCountry(country)
+				if err != nil {
+					return err
 				}
 
 				app := appstore.App{ID: appID, BundleID: bundleID}
@@ -172,6 +183,7 @@ func downloadCmdWithAppStore(appStore func() appstore.AppStore) *cobra.Command {
 	cmd.Flags().StringVarP(&outputPath, "output", "o", "", "The destination path of the downloaded app package")
 	cmd.Flags().StringVar(&externalVersionID, "external-version-id", "", "External version identifier of the target app (defaults to latest version when not specified)")
 	cmd.Flags().StringVar(&platformValue, "platform", "", "Platform to download for: iphone (iOS), ipad (iPadOS), appletv (tvOS), watchos, visionos, or macos")
+	cmd.Flags().StringVarP(&country, "country", "c", "", "App Store country code (defaults to the account storefront)")
 	cmd.Flags().BoolVar(&acquireLicense, "purchase", false, "Obtain a license for the app if needed")
 
 	return cmd

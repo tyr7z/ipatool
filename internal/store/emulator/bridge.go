@@ -590,7 +590,9 @@ func (r *Runtime) symbol(name string) {
 		r.set(queue)
 	case "dispatch_set_target_queue":
 		r.objects[r.arg(0)].Properties["targetQueue"] = r.arg(1)
-	case "dispatch_queue_create", "dispatch_get_global_queue", "dispatch_get_main_queue":
+	case "dispatch_get_main_queue":
+		r.set(r.dispatchMainQueue())
+	case "dispatch_queue_create", "dispatch_get_global_queue":
 		r.set(r.New("HostQueue", nil))
 	case "os_unfair_lock_assert_not_owner", "objc_sync_enter", "objc_sync_exit", "os_unfair_lock_lock_with_options", "os_unfair_lock_lock", "os_unfair_lock_unlock", "os_unfair_lock_assert_owner", "os_unfair_recursive_lock_lock_with_options", "os_unfair_recursive_lock_unlock":
 		r.set(0)
@@ -735,6 +737,10 @@ func (r *Runtime) message(receiver uint64, selector string, super bool) {
 	if class == "AMSLogConfig" || (class == "AMSConcurrency" && selector == "logFaultFromSwiftConcurrencyOnInternalBuild") {
 		r.set(0)
 
+		return
+	}
+
+	if r.keepAliveMessage(receiver, class, selector, meta) {
 		return
 	}
 
@@ -1929,16 +1935,7 @@ func (r *Runtime) formatAt(format string, sp uint64) string {
 
 		switch format[i] {
 		case '@':
-			if value == 0 {
-				result.WriteString("(null)")
-			} else {
-				obj := r.objects[value]
-				if obj == nil {
-					panic(fmt.Sprintf("unknown format object %#x", value))
-				}
-
-				result.WriteString(fmt.Sprint(obj.Value))
-			}
+			result.WriteString(r.formatObject(value))
 		case 'd', 'i':
 			result.WriteString(strconv.FormatInt(int64(value), 10))
 		case 'u':
@@ -1953,6 +1950,20 @@ func (r *Runtime) formatAt(format string, sp uint64) string {
 	}
 
 	return result.String()
+}
+
+// Class objects describe themselves by their name when used with %@.
+func (r *Runtime) formatObject(value uint64) string {
+	if value == 0 {
+		return "(null)"
+	}
+	if class, ok := r.classNames[value]; ok {
+		return class
+	}
+	if obj := r.objects[value]; obj != nil {
+		return fmt.Sprint(obj.Value)
+	}
+	panic(fmt.Sprintf("unknown format object %#x", value))
 }
 
 func (r *Runtime) bundle() uint64 {
@@ -2154,4 +2165,11 @@ func (r *Runtime) newUUIDString() string {
 	b[8] = (b[8] & 63) | 128
 
 	return fmt.Sprintf("%X-%X-%X-%X-%X", b[:4], b[4:6], b[6:8], b[8:10], b[10:])
+}
+
+func (r *Runtime) dispatchMainQueue() uint64 {
+	if r.mainQueue == 0 {
+		r.mainQueue = r.New("HostQueue", "com.apple.main-thread")
+	}
+	return r.mainQueue
 }

@@ -55,7 +55,7 @@ var _ = Describe("AppStore (ListVersions)", func() {
 				"softwareVersionExternalIdentifier":  uint64(876660716),
 			}}}}}, nil),
 		)
-		out, err := as.ListVersions(ListVersionsInput{Account: Account{StoreFront: "143443-2,34"}, App: App{ID: 6472431552, BundleID: "com.nebula.karing"}, Platform: PlatformMacOS})
+		out, err := as.ListVersions(ListVersionsInput{Country: " de ", Account: Account{StoreFront: "143441"}, App: App{ID: 6472431552, BundleID: "com.nebula.karing"}, Platform: PlatformMacOS})
 		Expect(err).ToNot(HaveOccurred())
 		Expect(out.ExternalVersionIdentifiers).To(Equal([]string{"876660700", "876660716"}))
 		Expect(out.LatestExternalVersionID).To(Equal("876660716"))
@@ -90,6 +90,11 @@ var _ = Describe("AppStore (ListVersions)", func() {
 		Expect(err).ToNot(HaveOccurred())
 		Expect(out.ExternalVersionIdentifiers).To(Equal([]string{"123455", "123456"}))
 		Expect(out.LatestExternalVersionID).To(Equal("123456"))
+	})
+
+	It("rejects unsupported countries before making requests", func() {
+		_, err := as.ListVersions(ListVersionsInput{Country: "ZZ"})
+		Expect(err).To(MatchError(`unsupported country code "ZZ"`))
 	})
 
 	It("rejects unsupported platforms before making requests", func() {

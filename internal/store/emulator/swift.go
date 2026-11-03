@@ -133,6 +133,35 @@ func (r *Runtime) swiftSymbol(name string) bool {
 	case "$sSo13os_log_type_ta0A0E7defaultABvgZ":
 		r.set(0)
 
+	case "$sSKsSS7ElementRtzrlE6joined9separatorS2S_tF":
+		// The pinned keep-alive caller supplies an Array<String> by address
+		// in swiftself, with the separator in x0/x1 and metadata in x2.
+		metadata := r.arg(2)
+		if r.read64(metadata+16) != r.profile.Symbols["$sSSN"] {
+			panic("unsupported Swift string collection for joined")
+		}
+		separator := r.swiftString(r.arg(0), r.arg(1))
+		self, _ := r.engine.RegRead(unicorn.RegX0 + 20)
+		array := r.read64(self)
+		count := r.read64(array + 16)
+		if count > 4096 {
+			panic("Swift joined collection exceeds runtime limit")
+		}
+		parts := make([]string, count)
+		total := uint64(0)
+		for i := uint64(0); i < count; i++ {
+			p := array + 32 + i*16
+			parts[i] = r.swiftString(r.read64(p), r.read64(p+8))
+			total += uint64(len(parts[i]))
+			if i > 0 {
+				total += uint64(len(separator))
+			}
+			if total > 1<<20 {
+				panic("Swift joined string exceeds runtime limit")
+			}
+		}
+		r.returnSwiftString(strings.Join(parts, separator))
+
 	case "$sSS6appendyySSF":
 		self, _ := r.engine.RegRead(unicorn.RegX0 + 20)
 		value := r.swiftString(r.read64(self), r.read64(self+8)) + r.swiftString(r.arg(0), r.arg(1))
@@ -333,6 +362,24 @@ func (r *Runtime) swiftSymbol(name string) bool {
 		self, _ := r.engine.RegRead(unicorn.RegX0 + 20)
 		r.set(r.read64(self))
 
+	case "$s2os12OSSignpostIDVwst":
+		// OSSignpostID wraps a UInt64, so Optional uses a separate tag byte.
+		if r.arg(2) != 1 || r.arg(1) > 1 {
+			panic("unsupported signpost ID optional tag")
+		}
+		if err := r.MemWrite(r.arg(0)+8, []byte{byte(r.arg(1))}); err != nil {
+			panic(err)
+		}
+	case "$s2os12OSSignpostIDVwet":
+		if r.arg(1) != 1 {
+			panic("unsupported signpost ID optional tag")
+		}
+		data, err := r.engine.MemRead(r.arg(0)+8, 1)
+		if err != nil {
+			panic(err)
+		}
+		r.set(uint64(data[0]))
+
 	case "$sScPwst":
 		if r.arg(2) != 1 || r.arg(1) > 1 {
 			panic("unsupported task priority optional tag")
@@ -456,6 +503,9 @@ func (r *Runtime) swiftSymbol(name string) bool {
 		r.set(r.hashCompress(self, r.read64(self), true))
 	case "$s10ObjectiveC8SelectorV4hash4intoys6HasherVz_tF":
 		r.hashWord(r.arg(0), r.arg(1))
+
+	case "$sSo17OS_dispatch_queueC8DispatchE4mainABvgZ":
+		r.set(r.dispatchMainQueue())
 
 	case "$sSo17OS_dispatch_queueC8DispatchE5async5group3qos5flags7executeySo0a1_b1_F0CSg_AC0D3QoSVAC0D13WorkItemFlagsVyyXBtF":
 		if r.arg(0) != 0 {

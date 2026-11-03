@@ -30,6 +30,27 @@ var _ = Describe("Download command", func() {
 			return cmd.Execute()
 		}
 
+		It("uses the selected storefront after authentication refresh and for purchase", func() {
+			store.downloadErrors = []error{appstore.ErrPasswordTokenExpired, appstore.ErrLicenseRequired, nil}
+			store.loginAccount = appstore.Account{StoreFront: "143441", PasswordToken: "fresh"}
+			Expect(execute("-b", "com.example.app", "-c", " jp ", "--purchase")).To(Succeed())
+			Expect(store.lookupInputs).To(HaveLen(3))
+			for _, input := range store.lookupInputs {
+				Expect(input.Account.StoreFront).To(Equal("143462"))
+			}
+			for _, input := range store.downloadInputs {
+				Expect(input.Account.StoreFront).To(Equal("143462"))
+			}
+			Expect(store.purchaseInputs).To(HaveLen(1))
+			Expect(store.purchaseInputs[0].Account.StoreFront).To(Equal("143462"))
+			Expect(store.account.StoreFront).To(Equal("143441"))
+		})
+
+		It("rejects unsupported countries before accessing the account", func() {
+			Expect(execute("-i", "42", "-c", "ZZ")).To(MatchError(`unsupported country code "ZZ"`))
+			Expect(store.accountInfoCalls).To(BeZero())
+		})
+
 		It("uses the app ID when the bundle is absent from the catalog", func() {
 			store.lookupError = fmt.Errorf("lookup: %w", appstore.ErrAppNotFound)
 			Expect(execute("-i", "42", "-b", "com.example.delisted", "--platform", "appletv")).To(Succeed())

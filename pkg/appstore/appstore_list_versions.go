@@ -12,6 +12,8 @@ type ListVersionsInput struct {
 	Account  Account
 	App      App
 	Platform Platform
+	// Country overrides the account storefront for this request.
+	Country string
 }
 
 type ListVersionsOutput struct {
@@ -29,6 +31,14 @@ func (t *appstore) ListVersions(input ListVersionsInput) (ListVersionsOutput, er
 	case PlatformIPhone, PlatformIPad, PlatformAppleTV, PlatformWatchOS, PlatformVisionOS, PlatformMacOS:
 	default:
 		return ListVersionsOutput{}, fmt.Errorf("invalid platform %q", platform)
+	}
+
+	if country := strings.ToUpper(strings.TrimSpace(input.Country)); country != "" {
+		storefront, ok := storeFronts[country]
+		if !ok {
+			return ListVersionsOutput{}, fmt.Errorf("unsupported country code %q", input.Country)
+		}
+		input.Account.StoreFront = storefront
 	}
 
 	macAddr, err := t.machine.MacAddress()

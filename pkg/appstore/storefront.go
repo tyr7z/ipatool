@@ -6,6 +6,21 @@ import (
 	"strings"
 )
 
+// WithCountry returns a copy of the account using the requested storefront.
+// An empty country preserves the account's storefront.
+func (a Account) WithCountry(country string) (Account, error) {
+	code := strings.ToUpper(strings.TrimSpace(country))
+	if code == "" {
+		return a, nil
+	}
+	storefront, ok := storeFronts[code]
+	if !ok {
+		return a, fmt.Errorf("unsupported country code %q", country)
+	}
+	a.StoreFront = storefront
+	return a, nil
+}
+
 func countryCodeFromStoreFront(storeFront string) (string, error) {
 	for key, val := range storeFronts {
 		parts := strings.Split(storeFront, "-")

@@ -55,6 +55,7 @@ type Runtime struct {
 	currentTask                 *asyncTask
 	nullObject                  uint64
 	associations                map[uint64]map[uint64]uint64
+	mainQueue                   uint64
 	currentQueue, selectedQueue uint64
 	preferences                 map[string]uint64
 	notificationCenter          uint64

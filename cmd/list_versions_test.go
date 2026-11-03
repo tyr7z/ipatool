@@ -30,6 +30,19 @@ var _ = Describe("List Versions command", func() {
 		Entry("iOS alias", []string{"-i", "42", "--platform", "ios"}, appstore.PlatformIPhone, false),
 	)
 
+	It("passes the country to bundle lookup and version listing", func() {
+		store := &fakeListVersionsAppStore{}
+		previous := dependencies
+		DeferCleanup(func() { dependencies = previous })
+		dependencies.AppStore = store
+		dependencies.Logger = log.NewLogger(log.Args{})
+		cmd := ListVersionsCmd()
+		cmd.SetArgs([]string{"-b", "com.example.app", "-c", "JP"})
+		Expect(cmd.Execute()).To(Succeed())
+		Expect(store.lookupInput.Country).To(Equal("JP"))
+		Expect(store.input.Country).To(Equal("JP"))
+	})
+
 	It("rejects unknown as a platform before accessing the account", func() {
 		cmd := ListVersionsCmd()
 		cmd.SetArgs([]string{"-i", "42", "--platform", "unknown"})
