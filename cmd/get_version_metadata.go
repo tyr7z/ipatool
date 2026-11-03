@@ -16,6 +16,7 @@ func getVersionMetadataCmd() *cobra.Command {
 		bundleID          string
 		externalVersionID string
 		platformValue     string
+		country           string
 	)
 
 	cmd := &cobra.Command{
@@ -28,6 +29,10 @@ func getVersionMetadataCmd() *cobra.Command {
 
 			platform, err := appstore.ParsePlatform(platformValue)
 			if err != nil {
+				return err
+			}
+
+			if _, err := (appstore.Account{}).WithCountry(country); err != nil {
 				return err
 			}
 
@@ -52,6 +57,11 @@ func getVersionMetadataCmd() *cobra.Command {
 					}
 
 					acc = loginResult.Account
+				}
+
+				acc, err = acc.WithCountry(country)
+				if err != nil {
+					return err
 				}
 
 				app := appstore.App{ID: appID}
@@ -102,6 +112,8 @@ func getVersionMetadataCmd() *cobra.Command {
 	cmd.Flags().StringVar(&externalVersionID, "external-version-id", "", "External version identifier of the target app (required)")
 
 	cmd.Flags().StringVar(&platformValue, "platform", "", "Platform to retrieve metadata for: iphone (iOS), ipad (iPadOS), appletv (tvOS), watchos, visionos, or macos")
+
+	cmd.Flags().StringVarP(&country, "country", "c", "", "App Store country code (defaults to the account storefront)")
 
 	_ = cmd.MarkFlagRequired("external-version-id")
 

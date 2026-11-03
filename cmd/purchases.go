@@ -14,7 +14,7 @@ import (
 func listPurchasesCmd() *cobra.Command {
 	var page, maxResults int
 
-	var platformValue string
+	var platformValue, country string
 
 	var platform appstore.Platform
 
@@ -36,6 +36,10 @@ func listPurchasesCmd() *cobra.Command {
 			var err error
 			platform, err = appstore.ParsePlatform(platformValue)
 
+			if err != nil {
+				return err
+			}
+			_, err = (appstore.Account{}).WithCountry(country)
 			return err
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -58,6 +62,11 @@ func listPurchasesCmd() *cobra.Command {
 					}
 
 					acc = loginResult.Account
+				}
+
+				acc, err = acc.WithCountry(country)
+				if err != nil {
+					return err
 				}
 
 				output, err := dependencies.AppStore.OwnedApps(appstore.OwnedAppsInput{
@@ -95,6 +104,8 @@ func listPurchasesCmd() *cobra.Command {
 	cmd.Flags().IntVarP(&maxResults, "max-results", "l", appstore.DefaultOwnedAppsLimit, "maximum number of apps to return per page")
 	cmd.Flags().IntVarP(&page, "page", "p", 1, "page of owned apps to return")
 	cmd.Flags().StringVar(&platformValue, "platform", "", "Filter by platform: iphone (iOS), ipad (iPadOS), appletv (tvOS), visionos, or macos")
+
+	cmd.Flags().StringVarP(&country, "country", "c", "", "App Store country code (defaults to the account storefront)")
 
 	return cmd
 }
